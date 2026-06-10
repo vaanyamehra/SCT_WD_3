@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Quiz Game :)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #1a0533;
+      --card: #2a0a4a;
+      --border: #7b2ff7;
+      --text: #ffffff;
+      --muted: #c9a0f5;
+      --a: #ff6ef7;
+      --b: #00ffcc;
+      --c: #ffdd00;
+      --d: #ff4f4f;
+      --correct: #00ffcc;
+      --wrong: #ff4f4f;
+    }
+
+    body {
+      font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+      background: linear-gradient(135deg, #1a0533 0%, #0a1a4a 50%, #0d2b1a 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '⭐';
+      position: fixed;
+      font-size: 300px;
+      opacity: 0.03;
+      top: -50px;
+      right: -80px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app { width: 100%; max-width: 680px; position: relative; z-index: 1; }
+
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn 0.4s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .welcome-card {
+      background: var(--card);
+      border: 3px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(123,47,247,0.5), 0 0 60px rgba(255,110,247,0.15);
+    }
+
+    .quiz-logo {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 1.6rem;
+      font-weight: 400;
+      color: #ffdd00;
+      text-shadow:
+        0 0 8px #ffdd00,
+        0 0 20px #ff6ef7,
+        0 0 40px #ff6ef7,
+        4px 4px 0px #7b2ff7;
+      margin-bottom: 16px;
+      letter-spacing: 2px;
+      line-height: 1.6;
+      animation: titlePulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes titlePulse {
+      0%, 100% { text-shadow: 0 0 8px #ffdd00, 0 0 20px #ff6ef7, 0 0 40px #ff6ef7, 4px 4px 0px #7b2ff7; }
+      50%       { text-shadow: 0 0 16px #ffdd00, 0 0 40px #ff6ef7, 0 0 70px #ff6ef7, 4px 4px 0px #7b2ff7; }
+    }
+
+    .category-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .cat-card {
+      background: rgba(123,47,247,0.15);
+      border: 2px dashed rgba(123,47,247,0.5);
+      border-radius: 10px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+    }
+
+    .cat-card:hover, .cat-card.selected {
+      border: 2px solid #ff6ef7;
+      background: rgba(255,110,247,0.15);
+      transform: scale(1.03);
+    }
+
+    .cat-icon { font-size: 1.6rem; margin-bottom: 6px; }
+    .cat-name { font-weight: 700; font-size: 0.9rem; color: #fff; }
+    .cat-count { color: var(--muted); font-size: 0.78rem; margin-top: 2px; }
+
+    .difficulty-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+
+    .diff-btn {
+      background: #1a0533;
+      border: 2px solid #7b2ff7;
+      color: #c9a0f5;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-family: 'Comic Neue', cursive;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .diff-btn:hover, .diff-btn.selected {
+      border-color: #00ffcc;
+      background: rgba(0,255,204,0.12);
+      color: #00ffcc;
+    }
+
+    .start-btn {
+      width: 100%;
+      background: linear-gradient(to right, #7b2ff7, #ff6ef7);
+      color: #fff;
+      border: none;
+      padding: 16px;
+      border-radius: 10px;
+      font-family: 'Comic Neue', cursive;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      box-shadow: 0 4px 15px rgba(123,47,247,0.5);
+    }
+
+    .start-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(255,110,247,0.5);
+    }
+
+    .quiz-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .q-counter {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #c9a0f5;
+      font-family: 'Comic Neue', cursive;
+    }
+
+    .score-pill {
+      background: rgba(255,221,0,0.2);
+      border: 2px solid #ffdd00;
+      color: #ffdd00;
+      padding: 5px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: 'Comic Neue', cursive;
+    }
+
+    .timer-bar {
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(123,47,247,0.4);
+    }
+
+    .timer-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #7b2ff7, #ff6ef7);
+      transition: width 1s linear, background 0.5s;
+      width: 100%;
+    }
+
+    .timer-fill.low { background: linear-gradient(90deg, #ffdd00, #ff4f4f); }
+
+    .q-card {
+      background: var(--card);
+      border: 2px solid #7b2ff7;
+      border-radius: 14px;
+      padding: 32px 28px;
+      margin-bottom: 14px;
+      box-shadow: 0 0 20px rgba(123,47,247,0.3);
+    }
+
+    .q-type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #ff6ef7;
+      background: rgba(255,110,247,0.12);
+      border: 1px solid rgba(255,110,247,0.4);
+      border-radius: 6px;
+      padding: 4px 10px;
+      margin-bottom: 16px;
+      font-family: 'Comic Neue', cursive;
+    }
+
+    .q-text {
+      font-family: 'Comic Neue', cursive;
+      font-size: clamp(1.1rem, 3vw, 1.35rem);
+      font-weight: 700;
+      line-height: 1.5;
+      margin-bottom: 24px;
+      color: #fff;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .option-btn {
+      background: rgba(123,47,247,0.1);
+      border: 2px solid rgba(123,47,247,0.4);
+      color: #fff;
+      padding: 14px 12px;
+      border-radius: 10px;
+      font-family: 'Comic Neue', cursive;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .option-letter {
+      width: 26px; height: 26px;
+      min-width: 26px;
+      border-radius: 6px;
+      background: rgba(123,47,247,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .option-btn:hover:not(:disabled) {
+      border-color: #ff6ef7;
+      background: rgba(255,110,247,0.12);
+      transform: scale(1.02);
+    }
+
+    .option-btn.correct {
+      border-color: #00ffcc;
+      background: rgba(0,255,204,0.12);
+      color: #00ffcc;
+    }
+
+    .option-btn.correct .option-letter {
+      background: #00ffcc;
+      color: #0a1a4a;
+    }
+
+    .option-btn.wrong {
+      border-color: #ff4f4f;
+      background: rgba(255,79,79,0.1);
+      color: #ff4f4f;
+    }
+
+    .option-btn.wrong .option-letter {
+      background: #ff4f4f;
+      color: #fff;
+    }
+
+    .fib-input {
+      width: 100%;
+      background: rgba(123,47,247,0.1);
+      border: 2px solid rgba(123,47,247,0.5);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #fff;
+      font-family: 'Comic Neue', cursive;
+      font-size: 1rem;
+      font-weight: 700;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .fib-input:focus { border-color: #ff6ef7; box-shadow: 0 0 10px rgba(255,110,247,0.3); }
+    .fib-input.correct { border-color: #00ffcc; background: rgba(0,255,204,0.08); }
+    .fib-input.wrong   { border-color: #ff4f4f; background: rgba(255,79,79,0.08); }
+
+    .submit-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .submit-btn {
+      flex: 1;
+      background: linear-gradient(to right, #7b2ff7, #ff6ef7);
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-family: 'Comic Neue', cursive;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,110,247,0.4); }
+    .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .feedback-box {
+      background: rgba(42,10,74,0.8);
+      border: 2px solid rgba(123,47,247,0.4);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 0.875rem;
+      color: #c9a0f5;
+      line-height: 1.6;
+      margin-top: 10px;
+      animation: fadeIn 0.3s;
+      font-family: 'Comic Neue', cursive;
+    }
+
+    .feedback-box.correct-fb { border-color: #00ffcc; color: #00ffcc; }
+    .feedback-box.wrong-fb   { border-color: #ff4f4f; color: #ff9090; }
+
+    .results-card {
+      background: var(--card);
+      border: 3px solid #7b2ff7;
+      border-radius: 16px;
+      padding: 44px 36px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(123,47,247,0.5), 0 0 60px rgba(255,110,247,0.1);
+    }
+
+    .result-emoji { font-size: 3.5rem; margin-bottom: 16px; }
+
+    .result-title {
+      font-family: 'Comic Neue', cursive;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #ffdd00;
+      text-shadow: 2px 2px 0 #ff6ef7;
+    }
+
+    .result-sub { color: #c9a0f5; margin-bottom: 32px; font-family: 'Comic Neue', cursive; }
+
+    .score-ring {
+      width: 150px; height: 150px;
+      margin: 0 auto 32px;
+      position: relative;
+    }
+
+    .score-ring svg {
+      width: 100%; height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .ring-track { fill: none; stroke: rgba(123,47,247,0.2); stroke-width: 12; }
+    .ring-fill  {
+      fill: none;
+      stroke: url(#ringGrad);
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 408;
+      stroke-dashoffset: 408;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .ring-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ring-score {
+      font-family: 'Comic Neue', cursive;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffdd00;
+    }
+
+    .ring-label { font-size: 0.75rem; color: var(--muted); }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .stat-box {
+      background: rgba(123,47,247,0.15);
+      border: 2px solid rgba(123,47,247,0.4);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .stat-box-num {
+      font-family: 'Comic Neue', cursive;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .stat-box-label { font-size: 0.75rem; color: var(--muted); margin-top: 2px; font-family: 'Comic Neue', cursive; }
+
+    .play-again-btn {
+      width: 100%;
+      background: linear-gradient(to right, #7b2ff7, #ff6ef7);
+      color: #fff;
+      border: none;
+      padding: 16px;
+      border-radius: 10px;
+      font-family: 'Comic Neue', cursive;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 15px rgba(123,47,247,0.5);
+    }
+
+    .play-again-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(255,110,247,0.5);
+    }
+
+    @media (max-width: 500px) {
+      .welcome-card, .q-card, .results-card { padding: 24px 18px; }
+      .options-grid { grid-template-columns: 1fr; }
+      .category-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="screen active" id="welcomeScreen">
+    <div class="welcome-card">
+      <div class="quiz-logo">🎮 QuizTime! 🎮</div>
+
+      <div style="text-align:left;margin-bottom:12px;">
+        <div style="font-size:0.75rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Choose Category</div>
+        <div class="category-grid" id="categoryGrid">
+          <div class="cat-card selected" data-cat="general" onclick="selectCat(this)">
+            <div class="cat-icon">🌍</div>
+            <div class="cat-name">General Knowledge</div>
+            <div class="cat-count">10 questions</div>
+          </div>
+          <div class="cat-card" data-cat="science" onclick="selectCat(this)">
+            <div class="cat-icon">🔬</div>
+            <div class="cat-name">Science</div>
+            <div class="cat-count">10 questions</div>
+          </div>
+          <div class="cat-card" data-cat="tech" onclick="selectCat(this)">
+            <div class="cat-icon">💻</div>
+            <div class="cat-name">Technology</div>
+            <div class="cat-count">10 questions</div>
+          </div>
+          <div class="cat-card" data-cat="history" onclick="selectCat(this)">
+            <div class="cat-icon">🏛️</div>
+            <div class="cat-name">History</div>
+            <div class="cat-count">10 questions</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:left;margin-bottom:32px;">
+        <div style="font-size:0.75rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Difficulty</div>
+        <div class="difficulty-row">
+          <button class="diff-btn selected" data-diff="easy" onclick="selectDiff(this)">Easy</button>
+          <button class="diff-btn" data-diff="medium" onclick="selectDiff(this)">Medium</button>
+          <button class="diff-btn" data-diff="hard" onclick="selectDiff(this)">Hard</button>
+        </div>
+      </div>
+
+      <button class="start-btn" onclick="startQuiz()">Start Quiz →</button>
+    </div>
+  </div>
+
+  <div class="screen" id="quizScreen">
+    <div class="quiz-topbar">
+      <div class="q-counter" id="qCounter">Question 1 of 10</div>
+      <div class="score-pill" id="scorePill">Score: 0</div>
+    </div>
+    <div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
+    <div class="q-card">
+      <div class="q-type-badge" id="qTypeBadge">⚡ Multiple Choice</div>
+      <div class="q-text" id="qText">Question text here</div>
+      <div id="qAnswerArea"></div>
+    </div>
+    <div id="feedbackBox"></div>
+    <div class="submit-row">
+      <button class="submit-btn" id="submitBtn" onclick="submitAnswer()">Submit Answer</button>
+      <button class="submit-btn" id="nextBtn" onclick="nextQuestion()" style="display:none;background:linear-gradient(to right,#00c9a7,#00ffcc)">Next →</button>
+    </div>
+  </div>
+
+  <div class="screen" id="resultsScreen">
+    <div class="results-card">
+      <div class="result-emoji" id="resultEmoji">🎉</div>
+      <div class="result-title" id="resultTitle">Great Job!</div>
+      <div class="result-sub" id="resultSub">You completed the quiz!</div>
+
+      <div class="score-ring">
+        <svg viewBox="0 0 140 140">
+          <defs>
+            <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#ff6ef7"/>
+              <stop offset="100%" stop-color="#00ffcc"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-track" cx="70" cy="70" r="65"/>
+          <circle class="ring-fill" id="ringFill" cx="70" cy="70" r="65"/>
+        </svg>
+        <div class="ring-text">
+          <div class="ring-score" id="ringScore">0%</div>
+          <div class="ring-label">Score</div>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-box-num" id="statCorrect" style="color:var(--correct)">0</div>
+          <div class="stat-box-label">Correct</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" id="statWrong" style="color:var(--wrong)">0</div>
+          <div class="stat-box-label">Wrong</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" id="statTime" style="color:var(--c)">0s</div>
+          <div class="stat-box-label">Avg. Time</div>
+        </div>
+      </div>
+
+      <button class="play-again-btn" onclick="goHome()">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ALL_QUESTIONS = {
+  general: [
+    { type:'mcq', q:'What is the capital of Japan?', opts:['Tokyo','Seoul','Beijing','Bangkok'], answer:0, explanation:'Tokyo has been the capital of Japan since 1869.' },
+    { type:'mcq', q:'How many continents are there on Earth?', opts:['5','6','7','8'], answer:2, explanation:'There are 7 continents: Africa, Antarctica, Asia, Australia, Europe, North America, and South America.' },
+    { type:'fib', q:'The Great Wall of China was built during which dynasty? (Hint: ____ Dynasty)', answer:'Ming', explanation:'Most of the Great Wall was built during the Ming Dynasty (1368–1644).' },
+    { type:'mcq', q:'Which ocean is the largest?', opts:['Atlantic','Indian','Pacific','Arctic'], answer:2, explanation:'The Pacific Ocean covers about 46% of the Earth\'s water surface.' },
+    { type:'mcq', q:'Which country invented the printing press?', opts:['China','Germany','England','France'], answer:1, explanation:'Johannes Gutenberg invented the printing press in Germany around 1440.' },
+    { type:'fib', q:'The Mona Lisa was painted by _____', answer:'Leonardo da Vinci', explanation:'The Mona Lisa was painted by Italian Renaissance artist Leonardo da Vinci.' },
+    { type:'mcq', q:'What is the chemical formula of water?', opts:['H2O','CO2','O2','NaCl'], answer:0, explanation:'Water consists of two hydrogen atoms and one oxygen atom.' },
+    { type:'mcq', q:'Which is the world\'s tallest mountain?', opts:['K2','Mont Blanc','Everest','Kangchenjunga'], answer:2, explanation:'Mount Everest stands at 8,848.86 m above sea level.' },
+    { type:'mcq', q:'Who wrote "Romeo and Juliet"?', opts:['Dickens','Hemingway','Shakespeare','Tolstoy'], answer:2, explanation:'Romeo and Juliet was written by William Shakespeare around 1594-1596.' },
+    { type:'fib', q:'The speed of light is approximately _____ km/s', answer:'300000', explanation:'The speed of light in a vacuum is approximately 299,792 km/s.' },
+  ],
+  science: [
+    { type:'mcq', q:'What is the powerhouse of the cell?', opts:['Nucleus','Mitochondria','Ribosome','Golgi body'], answer:1, explanation:'Mitochondria produce ATP, the cell\'s main energy currency.' },
+    { type:'mcq', q:'DNA stands for:', opts:['Deoxyribose Nucleic Acid','Deoxyribonucleic Acid','Double Nucleic Acid','Dynamic Nucleic Acid'], answer:1, explanation:'DNA = Deoxyribonucleic Acid, the molecule carrying genetic information.' },
+    { type:'fib', q:'The atomic number of Carbon is _____', answer:'6', explanation:'Carbon has 6 protons in its nucleus, giving it atomic number 6.' },
+    { type:'mcq', q:'Which planet is known as the Red Planet?', opts:['Venus','Jupiter','Mars','Saturn'], answer:2, explanation:'Mars appears red due to iron oxide (rust) on its surface.' },
+    { type:'mcq', q:'What is the unit of electrical resistance?', opts:['Volt','Ampere','Ohm','Watt'], answer:2, explanation:'Ohm (Ω) is the SI unit of electrical resistance.' },
+    { type:'mcq', q:'Which gas makes up most of Earth\'s atmosphere?', opts:['Oxygen','Carbon Dioxide','Nitrogen','Argon'], answer:2, explanation:'Nitrogen makes up about 78% of Earth\'s atmosphere.' },
+    { type:'fib', q:'The theory of relativity was proposed by Albert _____', answer:'Einstein', explanation:'Albert Einstein published the special theory of relativity in 1905.' },
+    { type:'mcq', q:'Which part of the human body produces insulin?', opts:['Liver','Kidney','Pancreas','Heart'], answer:2, explanation:'The pancreas produces insulin to regulate blood sugar levels.' },
+    { type:'mcq', q:'What is the boiling point of water in Celsius?', opts:['90°C','100°C','110°C','80°C'], answer:1, explanation:'Water boils at 100°C (212°F) at standard atmospheric pressure.' },
+    { type:'mcq', q:'Which scientist discovered penicillin?', opts:['Marie Curie','Louis Pasteur','Alexander Fleming','Edward Jenner'], answer:2, explanation:'Alexander Fleming discovered penicillin in 1928.' },
+  ],
+  tech: [
+    { type:'mcq', q:'What does HTML stand for?', opts:['HyperText Markup Language','HighText Markup Language','HyperText Making Language','HyperTool Markup Language'], answer:0, explanation:'HTML = HyperText Markup Language, the standard language for web pages.' },
+    { type:'fib', q:'CSS stands for Cascading Style _____', answer:'Sheets', explanation:'CSS = Cascading Style Sheets, used to style HTML elements.' },
+    { type:'mcq', q:'Which company created the Python language?', opts:['Google','Sun Microsystems','Guido van Rossum','Microsoft'], answer:2, explanation:'Python was created by Guido van Rossum and released in 1991.' },
+    { type:'mcq', q:'What does "CPU" stand for?', opts:['Central Processing Unit','Computer Processing Unit','Core Processing Utility','Central Program Unit'], answer:0, explanation:'CPU = Central Processing Unit, the main processing chip of a computer.' },
+    { type:'mcq', q:'Which data structure uses LIFO?', opts:['Queue','Array','Stack','Linked List'], answer:2, explanation:'A Stack uses Last In, First Out (LIFO) ordering.' },
+    { type:'fib', q:'JavaScript was created in _____ days', answer:'10', explanation:'Brendan Eich created the initial version of JavaScript in just 10 days in 1995.' },
+    { type:'mcq', q:'What does SQL stand for?', opts:['Structured Query Language','System Query Language','Standard Query Logic','Sequential Query Language'], answer:0, explanation:'SQL = Structured Query Language, used to manage relational databases.' },
+    { type:'mcq', q:'Which protocol is used for secure communication over the internet?', opts:['HTTP','FTP','HTTPS','SMTP'], answer:2, explanation:'HTTPS uses SSL/TLS encryption for secure communication.' },
+    { type:'mcq', q:'In binary, what is 5?', opts:['100','101','110','011'], answer:1, explanation:'5 in binary is 101 (1×4 + 0×2 + 1×1).' },
+    { type:'mcq', q:'What is the time complexity of binary search?', opts:['O(n)','O(n²)','O(log n)','O(1)'], answer:2, explanation:'Binary search has O(log n) time complexity as it halves the search space each step.' },
+  ],
+  history: [
+    { type:'mcq', q:'In which year did World War II end?', opts:['1943','1944','1945','1946'], answer:2, explanation:'World War II ended in 1945 with Germany surrendering in May and Japan in September.' },
+    { type:'fib', q:'The French Revolution began in _____', answer:'1789', explanation:'The French Revolution began in 1789 and lasted until 1799.' },
+    { type:'mcq', q:'Who was the first President of the United States?', opts:['John Adams','Thomas Jefferson','Benjamin Franklin','George Washington'], answer:3, explanation:'George Washington served as the first U.S. President from 1789 to 1797.' },
+    { type:'mcq', q:'The ancient city of Machu Picchu was built by which civilization?', opts:['Aztec','Maya','Inca','Olmec'], answer:2, explanation:'Machu Picchu was built by the Inca civilization around 1450 CE.' },
+    { type:'mcq', q:'Which empire was ruled by Julius Caesar?', opts:['Greek','Ottoman','Roman','Persian'], answer:2, explanation:'Julius Caesar was a Roman general and statesman who ruled Rome.' },
+    { type:'fib', q:'The Berlin Wall fell in _____', answer:'1989', explanation:'The Berlin Wall fell on November 9, 1989, signaling the end of the Cold War.' },
+    { type:'mcq', q:'Who invented the telephone?', opts:['Thomas Edison','Nikola Tesla','Alexander Graham Bell','Guglielmo Marconi'], answer:2, explanation:'Alexander Graham Bell is credited with inventing the telephone in 1876.' },
+    { type:'mcq', q:'The Mughal Empire was founded in India by:', opts:['Akbar','Aurangzeb','Babur','Shah Jahan'], answer:2, explanation:'Babur founded the Mughal Empire in 1526 after defeating Ibrahim Lodi.' },
+    { type:'mcq', q:'In which year did India gain independence?', opts:['1945','1946','1947','1948'], answer:2, explanation:'India gained independence from British rule on August 15, 1947.' },
+    { type:'mcq', q:'The Renaissance period began in which country?', opts:['France','England','Germany','Italy'], answer:3, explanation:'The Renaissance began in Italy around the 14th century.' },
+  ]
+};
+
+let currentCat = 'general';
+let currentDiff = 'easy';
+let questions = [];
+let currentQ = 0;
+let score = 0;
+let correctCount = 0;
+let wrongCount = 0;
+let answered = false;
+let timerInterval;
+let timeLeft = 30;
+let totalTime = 0;
+let questionStartTime;
+
+const LETTERS = ['A','B','C','D'];
+const TIMER_SECONDS = { easy: 30, medium: 20, hard: 12 };
+
+function selectCat(el) {
+  document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  currentCat = el.dataset.cat;
+}
+
+function selectDiff(el) {
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  currentDiff = el.dataset.diff;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startQuiz() {
+  questions = [...ALL_QUESTIONS[currentCat]].sort(() => Math.random()-0.5).slice(0,10);
+  currentQ = 0; score = 0; correctCount = 0; wrongCount = 0; totalTime = 0;
+  showScreen('quizScreen');
+  loadQuestion();
+}
+
+function loadQuestion() {
+  const q = questions[currentQ];
+  answered = false;
+  questionStartTime = Date.now();
+  document.getElementById('qCounter').textContent = `Question ${currentQ+1} of ${questions.length}`;
+  document.getElementById('scorePill').textContent = `Score: ${score}`;
+  document.getElementById('qTypeBadge').textContent = q.type==='fib' ? '✏️ Fill in the Blank' : '⚡ Multiple Choice';
+  document.getElementById('qText').textContent = q.q;
+  document.getElementById('feedbackBox').innerHTML = '';
+  document.getElementById('submitBtn').style.display = '';
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('nextBtn').style.display = 'none';
+
+  if (q.type === 'mcq') {
+    const shuffled = q.opts.map((o,i) => ({text:o, idx:i})).sort(() => Math.random()-0.5);
+    q._shuffled = shuffled;
+    q._correctShuffled = shuffled.findIndex(o => o.idx === q.answer);
+    document.getElementById('qAnswerArea').innerHTML = `<div class="options-grid">${
+      shuffled.map((o,i) => `<button class="option-btn" id="opt${i}" onclick="selectOpt(${i})">
+        <span class="option-letter">${LETTERS[i]}</span> ${o.text}
+      </button>`).join('')
+    }</div>`;
+    q._selectedOpt = null;
+  } else {
+    document.getElementById('qAnswerArea').innerHTML = `<input class="fib-input" id="fibInput" type="text" placeholder="Type your answer..." oninput="updateSubmit()"/>`;
+    document.getElementById('submitBtn').disabled = true;
+  }
+
+  startTimer();
+}
+
+function updateSubmit() {
+  const val = document.getElementById('fibInput').value.trim();
+  document.getElementById('submitBtn').disabled = val.length === 0;
+}
+
+let selectedOpt = null;
+function selectOpt(i) {
+  if (answered) return;
+  selectedOpt = i;
+  const q = questions[currentQ];
+  q._selectedOpt = i;
+  document.querySelectorAll('.option-btn').forEach((b,j) => {
+    b.style.borderColor = j===i ? 'var(--a)' : '';
+    b.style.background  = j===i ? 'rgba(167,139,250,0.1)' : '';
+  });
+}
+
+function submitAnswer() {
+  if (answered) return;
+  const q = questions[currentQ];
+  clearInterval(timerInterval);
+  answered = true;
+  const elapsed = Math.round((Date.now()-questionStartTime)/1000);
+  totalTime += elapsed;
+
+  let correct = false;
+
+  if (q.type === 'mcq') {
+    const sel = q._selectedOpt;
+    if (sel === null) { nextQuestion(); return; }
+    correct = sel === q._correctShuffled;
+    document.querySelectorAll('.option-btn').forEach((btn,i) => {
+      btn.disabled = true;
+      if (i === q._correctShuffled) btn.classList.add('correct');
+      else if (i === sel && !correct) btn.classList.add('wrong');
+    });
+  } else {
+    const input = document.getElementById('fibInput');
+    const val = input.value.trim().toLowerCase();
+    correct = val === q.answer.toLowerCase() || val.includes(q.answer.toLowerCase());
+    input.classList.add(correct ? 'correct' : 'wrong');
+    input.disabled = true;
+    if (!correct) {
+      const hint = document.createElement('div');
+      hint.style.cssText = 'font-size:0.8rem;color:var(--muted);margin-top:8px;';
+      hint.textContent = `Correct answer: ${q.answer}`;
+      input.parentNode.appendChild(hint);
+    }
+  }
+
+  if (correct) {
+    const pts = currentDiff==='easy'?10:currentDiff==='medium'?15:20;
+    const speedBonus = Math.max(0, TIMER_SECONDS[currentDiff]-elapsed);
+    score += pts + speedBonus;
+    correctCount++;
+  } else {
+    wrongCount++;
+  }
+
+  document.getElementById('scorePill').textContent = `Score: ${score}`;
+  document.getElementById('feedbackBox').innerHTML =
+    `<div class="feedback-box ${correct?'correct-fb':'wrong-fb'}">
+      ${correct ? '✅ Correct!' : '❌ Incorrect!'} ${q.explanation}
+    </div>`;
+
+  document.getElementById('submitBtn').style.display = 'none';
+  document.getElementById('nextBtn').style.display = '';
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= questions.length) showResults();
+  else loadQuestion();
+}
+
+function startTimer() {
+  timeLeft = TIMER_SECONDS[currentDiff];
+  const fill = document.getElementById('timerFill');
+  fill.style.width = '100%';
+  fill.className = 'timer-fill';
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    fill.style.width = (timeLeft/TIMER_SECONDS[currentDiff]*100)+'%';
+    if (timeLeft <= TIMER_SECONDS[currentDiff]*0.3) fill.classList.add('low');
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      if (!answered) { answered=true; wrongCount++; totalTime+=TIMER_SECONDS[currentDiff];
+        document.getElementById('feedbackBox').innerHTML = `<div class="feedback-box wrong-fb">⏰ Time's up! ${questions[currentQ].explanation}</div>`;
+        document.getElementById('submitBtn').style.display='none';
+        document.getElementById('nextBtn').style.display='';
+        if (questions[currentQ].type==='mcq') {
+          document.querySelectorAll('.option-btn').forEach((b,i)=>{b.disabled=true; if(i===questions[currentQ]._correctShuffled)b.classList.add('correct');});
+        } else {
+          const inp=document.getElementById('fibInput'); inp.disabled=true; inp.classList.add('wrong');
+        }
+      }
+    }
+  }, 1000);
+}
+
+function showResults() {
+  clearInterval(timerInterval);
+  showScreen('resultsScreen');
+  const pct = Math.round(correctCount/questions.length*100);
+  const emoji = pct>=80?'🏆':pct>=60?'🎉':pct>=40?'👍':'💪';
+  const title = pct>=80?'Outstanding!':pct>=60?'Great Job!':pct>=40?'Good Effort!':'Keep Practicing!';
+  document.getElementById('resultEmoji').textContent = emoji;
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultSub').textContent = `You scored ${score} points on ${currentCat} quiz`;
+  document.getElementById('statCorrect').textContent = correctCount;
+  document.getElementById('statWrong').textContent = wrongCount;
+  document.getElementById('statTime').textContent = Math.round(totalTime/questions.length)+'s';
+  document.getElementById('ringScore').textContent = pct+'%';
+
+  setTimeout(() => {
+    const circumference = 2 * Math.PI * 65;
+    document.getElementById('ringFill').style.strokeDashoffset = circumference*(1-pct/100);
+  }, 200);
+}
+
+function goHome() { showScreen('welcomeScreen'); }
+</script>
+</body>
+</html>
