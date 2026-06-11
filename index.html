@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Quiz Game :)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #1a0533;
+      --card: #2a0a4a;
+      --border: #7b2ff7;
+      --text: #ffffff;
+      --muted: #c9a0f5;
+      --a: #ff6ef7;
+      --b: #00ffcc;
+      --c: #ffdd00;
+      --d: #ff4f4f;
+      --correct: #00ffcc;
+      --wrong: #ff4f4f;
+    }
+
+    body {
+      font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+      background: linear-gradient(135deg, #1a0533 0%, #0a1a4a 50%, #0d2b1a 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '⭐';
+      position: fixed;
+      font-size: 300px;
+      opacity: 0.03;
+      top: -50px;
+      right: -80px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app { width: 100%; max-width: 680px; position: relative; z-index: 1; }
+
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn 0.4s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .welcome-card {
+      background: var(--card);
+      border: 3px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(123,47,247,0.5), 0 0 60px rgba(255,110,247,0.15);
+    }
+
+    .quiz-logo {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 1.6rem;
+      font-weight: 400;
+      color: #ffdd00;
+      text-shadow:
+        0 0 8px #ffdd00,
+        0 0 20px #ff6ef7,
+        0 0 40px #ff6ef7,
+        4px 4px 0px #7b2ff7;
+      margin-bottom: 16px;
+      letter-spacing: 2px;
+      line-height: 1.6;
+      animation: titlePulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes titlePulse {
+      0%, 100% { text-shadow: 0 0 8px #ffdd00, 0 0 20px #ff6ef7, 0 0 40px #ff6ef7, 4px 4px 0px #7b2ff7; }
+      50%       { text-shadow: 0 0 16px #ffdd00, 0 0 40px #ff6ef7, 0 0 70px #ff6ef7, 4px 4px 0px #7b2ff7; }
+    }
+
+    .category-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .cat-card {
+      background: rgba(123,47,247,0.15);
+      border: 2px dashed rgba(123,47,247,0.5);
+      border-radius: 10px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+    }
+
+    .cat-card:hover, .cat-card.selected {
+      border: 2px solid #ff6ef7;
+      background: rgba(255,110,247,0.15);
+      transform: scale(1.03);
+    }
+
+    .cat-icon { font-size: 1.6rem; margin-bottom: 6px; }
+    .cat-name { font-weight: 700; font-size: 0.9rem; color: #fff; }
+    .cat-count { color: var(--muted); font-size: 0.78rem; margin-top: 2px; }
+
+    .difficulty-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+
+    .diff-btn {
+      background: #1a0533;
+      border: 2px solid #7b2ff7;
+      color: #c9a0f5;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-family: 'Comic Neue', cursive;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .diff-btn:hover, .diff-btn.selected {
+      border-color: #00ffcc;
+      background: rgba(0,255,204,0.12);
+      color: #00ffcc;
+    }
+
+    .start-btn {
+      width: 100%;
+      background: linear-gradient(to right, #7b2ff7, #ff6ef7);
+      color: #fff;
+      border: none;
+      padding: 16px;
+      border-radius: 10px;
+      font-family: 'Comic Neue', cursive;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      box-shadow: 0 4px 15px rgba(123,47,247,0.5);
+    }
+
+    .start-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(255,110,247,0.5);
+    }
+
+    .quiz-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .q-counter {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #c9a0f5;
+      font-family: 'Comic Neue', cursive;
+    }
+
+    .score-pill {
+      background: rgba(255,221,0,0.2);
+      border: 2px solid #ffdd00;
+      color: #ffdd00;
+      padding: 5px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: 'Comic Neue', cursive;
+    }
+
+    .timer-bar {
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(123,47,247,0.4);
+    }
+
+    .timer-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #7b2ff7, #ff6ef7);
+      transition: width 1s linear, background 0.5s;
+      width: 100%;
+    }
+
+    .timer-fill.low { background: linear-gradient(90deg, #ffdd00, #ff4f4f); }
+
+    .q-card {
+      background: var(--card);
+      border: 2px solid #7b2ff7;
+      border-radius: 14px;
+      padding: 32px 28px;
+      margin-bottom: 14px;
+      box-shadow: 0 0 20px rgba(123,47,247,0.3);
+    }
+
+    .q-type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #ff6ef7;
+      background: rgba(255,110,247,0.12);
+      border: 1px solid rgba(255,110,247,0.4);
+      border-radius: 6px;
+      padding: 4px 10px;
+      margin-bottom: 16px;
+      font-family: 'Comic Neue', cursive;
+    }
+
+    .q-text {
+      font-family: 'Comic Neue', cursive;
+      font-size: clamp(1.1rem, 3vw, 1.35rem);
+      font-weight: 700;
+      line-height: 1.5;
+      margin-bottom: 24px;
+      color: #fff;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .option-btn {
+      background: rgba(123,47,247,0.1);
+      border: 2px solid rgba(123,47,247,0.4);
+      color: #fff;
+      padding: 14px 12px;
+      border-radius: 10px;
+      font-family: 'Comic Neue', cursive;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .option-letter {
+      width: 26px; height: 26px;
+      min-width: 26px;
+      border-radius: 6px;
+      background: rgba(123,47,247,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .option-btn:hover:not(:disabled) {
+      border-color: #ff6ef7;
+      background: rgba(255,110,247,0.12);
+      transform: scale(1.02);
+    }
+
+    .option-btn.correct {
+      border-color: #00ffcc;
+      background: rgba(0,255,204,0.12);
+      color: #00ffcc;
+    }
+
+    .option-btn.correct .option-letter {
+      background: #00ffcc;
+      color: #0a1a4a;
+    }
+
+    .option-btn.wrong {
+      border-color: #ff4f4f;
+      background: rgba(255,79,79,0.1);
+      color: #ff4f4f;
+    }
+
+    .option-btn.wrong .option-letter {
+      background: #ff4f4f;
+      color: #fff;
+    }
+
+    .fib-input {
+      width: 100%;
+      background: rgba(123,47,247,0.1);
+      border: 2px solid rgba(123,47,247,0.5);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #fff;
+      font-family: 'Comic Neue', cursive;
+      font-size: 1rem;
+      font-weight: 700;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .fib-input:focus { border-color: #ff6ef7; box-shadow: 0 0 10px rgba(255,110,247,0.3); }
+    .fib-input.correct { border-color: #00ffcc; background: rgba(0,255,204,0.08); }
+    .fib-input.wrong   { border-color: #ff4f4f; background: rgba(255,79,79,0.08); }
+
+    .submit-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .submit-btn {
+      flex: 1;
+      background: linear-gradient(to right, #7b2ff7, #ff6ef7);
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-family: 'Comic Neue', cursive;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,110,247,0.4); }
+    .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .feedback-box {
+      background: rgba(42,10,74,0.8);
+      border: 2px solid rgba(123,47,247,0.4);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 0.875rem;
+      color: #c9a0f5;
+      line-height: 1.6;
+      margin-top: 10px;
+      animation: fadeIn 0.3s;
+      font-family: 'Comic Neue', cursive;
+    }
+
+    .feedback-box.correct-fb { border-color: #00ffcc; color: #00ffcc; }
+    .feedback-box.wrong-fb   { border-color: #ff4f4f; color: #ff9090; }
+
+    .results-card {
+      background: var(--card);
+      border: 3px solid #7b2ff7;
+      border-radius: 16px;
+      padding: 44px 36px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(123,47,247,0.5), 0 0 60px rgba(255,110,247,0.1);
+    }
+
+    .result-emoji { font-size: 3.5rem; margin-bottom: 16px; }
+
+    .result-title {
+      font-family: 'Comic Neue', cursive;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #ffdd00;
+      text-shadow: 2px 2px 0 #ff6ef7;
+    }
+
+    .result-sub { color: #c9a0f5; margin-bottom: 32px; font-family: 'Comic Neue', cursive; }
+
+    .score-ring {
+      width: 150px; height: 150px;
+      margin: 0 auto 32px;
+      position: relative;
+    }
+
+    .score-ring svg {
+      width: 100%; height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .ring-track { fill: none; stroke: rgba(123,47,247,0.2); stroke-width: 12; }
+    .ring-fill  {
+      fill: none;
+      stroke: url(#ringGrad);
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 408;
+      stroke-dashoffset: 408;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .ring-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ring-score {
+      font-family: 'Comic Neue', cursive;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #ffdd00;
+    }
+
+    .ring-label { font-size: 0.75rem; color: var(--muted); }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .stat-box {
+      background: rgba(123,47,247,0.15);
+      border: 2px solid rgba(123,47,247,0.4);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .stat-box-num {
+      font-family: 'Comic Neue', cursive;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .stat-box-label { font-size: 0.75rem; color: var(--muted); margin-top: 2px; font-family: 'Comic Neue', cursive; }
+
+    .play-again-btn {
+      width: 100%;
+      background: linear-gradient(to right, #7b2ff7, #ff6ef7);
+      color: #fff;
+      border: none;
+      padding: 16px;
+      border-radius: 10px;
+      font-family: 'Comic Neue', cursive;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 15px rgba(123,47,247,0.5);
+    }
+
+    .play-again-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(255,110,247,0.5);
+    }
+
+    @media (max-width: 500px) {
+      .welcome-card, .q-card, .results-card { padding: 24px 18px; }
+      .options-grid { grid-template-columns: 1fr; }
+      .category-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="screen active" id="welcomeScreen">
+    <div class="welcome-card">
+      <div class="quiz-logo">🎮 QuizTime! 🎮</div>
+
+      <div style="text-align:left;margin-bottom:12px;">
+        <div style="font-size:0.75rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Choose Category</div>
+        <div class="category-grid" id="categoryGrid">
+          <div class="cat-card selected" data-cat="general" onclick="selectCat(this)">
+            <div class="cat-icon">🌍</div>
+            <div class="cat-name">General Knowledge</div>
+            <div class="cat-count">10 questions</div>
+          </div>
+          <div class="cat-card" data-cat="science" onclick="selectCat(this)">
+            <div class="cat-icon">🔬</div>
+            <div class="cat-name">Science</div>
+            <div class="cat-count">10 questions</div>
+          </div>
+          <div class="cat-card" data-cat="tech" onclick="selectCat(this)">
+            <div class="cat-icon">💻</div>
+            <div class="cat-name">Technology</div>
+            <div class="cat-count">10 questions</div>
+          </div>
+          <div class="cat-card" data-cat="history" onclick="selectCat(this)">
+            <div class="cat-icon">🏛️</div>
+            <div class="cat-name">History</div>
+            <div class="cat-count">10 questions</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:left;margin-bottom:32px;">
+        <div style="font-size:0.75rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Difficulty</div>
+        <div class="difficulty-row">
+          <button class="diff-btn selected" data-diff="easy" onclick="selectDiff(this)">Easy</button>
+          <button class="diff-btn" data-diff="medium" onclick="selectDiff(this)">Medium</button>
+          <button class="diff-btn" data-diff="hard" onclick="selectDiff(this)">Hard</button>
+        </div>
+      </div>
+
+      <button class="start-btn" onclick="startQuiz()">Start Quiz →</button>
+    </div>
+  </div>
+
+  <div class="screen" id="quizScreen">
+    <div class="quiz-topbar">
+      <div class="q-counter" id="qCounter">Question 1 of 10</div>
+      <div class="score-pill" id="scorePill">Score: 0</div>
+    </div>
+    <div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
+    <div class="q-card">
+      <div class="q-type-badge" id="qTypeBadge">⚡ Multiple Choice</div>
+      <div class="q-text" id="qText">Question text here</div>
+      <div id="qAnswerArea"></div>
+    </div>
+    <div id="feedbackBox"></div>
+    <div class="submit-row">
+      <button class="submit-btn" id="submitBtn" onclick="submitAnswer()">Submit Answer</button>
+      <button class="submit-btn" id="nextBtn" onclick="nextQuestion()" style="display:none;background:linear-gradient(to right,#00c9a7,#00ffcc)">Next →</button>
+    </div>
+  </div>
+
+  <div class="screen" id="resultsScreen">
+    <div class="results-card">
+      <div class="result-emoji" id="resultEmoji">🎉</div>
+      <div class="result-title" id="resultTitle">Great Job!</div>
+      <div class="result-sub" id="resultSub">You completed the quiz!</div>
+
+      <div class="score-ring">
+        <svg viewBox="0 0 140 140">
+          <defs>
+            <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#ff6ef7"/>
+              <stop offset="100%" stop-color="#00ffcc"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-track" cx="70" cy="70" r="65"/>
+          <circle class="ring-fill" id="ringFill" cx="70" cy="70" r="65"/>
+        </svg>
+        <div class="ring-text">
+          <div class="ring-score" id="ringScore">0%</div>
+          <div class="ring-label">Score</div>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-box-num" id="statCorrect" style="color:var(--correct)">0</div>
+          <div class="stat-box-label">Correct</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" id="statWrong" style="color:var(--wrong)">0</div>
+          <div class="stat-box-label">Wrong</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" id="statTime" style="color:var(--c)">0s</div>
+          <div class="stat-box-label">Avg. Time</div>
+        </div>
+      </div>
+
+      <button class="play-again-btn" onclick="goHome()">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ALL_QUESTIONS = {
+  tech: {
+    easy: [
+      { type:'mcq', q:'Which device is used to type text into a computer?', opts:['Mouse','Keyboard','Monitor','Printer'], answer:1, explanation:'The keyboard is the main input device used to type text into a computer.' },
+      { type:'fib', q:'The full form of CPU is Central Processing _____', answer:'Unit', explanation:'CPU stands for Central Processing Unit, the brain of the computer.' },
+      { type:'mcq', q:'Which company created the Android operating system?', opts:['Apple','Microsoft','Google','Intel'], answer:2, explanation:'Android was developed by Google and released in 2008.' },
+      { type:'fib', q:'Websites are accessed using a web _____', answer:'Browser', explanation:'A web browser like Chrome or Firefox is used to access websites on the internet.' },
+      { type:'mcq', q:'Which of the following is an input device?', opts:['Printer','Monitor','Scanner','Speaker'], answer:2, explanation:'A scanner reads physical documents and converts them into digital data — making it an input device.' },
+      { type:'fib', q:'The Internet is a global network of _____', answer:'Computers', explanation:'The Internet is a massive global network connecting millions of computers worldwide.' },
+      { type:'mcq', q:'Which symbol is commonly used in email addresses?', opts:['#','@','$','&'], answer:1, explanation:'The @ symbol separates the username from the domain in every email address.' },
+      { type:'fib', q:'A laptop is a _____ computer', answer:'Portable', explanation:'A laptop is a portable computer designed to be used on the go.' },
+      { type:'mcq', q:'Which storage unit is larger?', opts:['KB','MB','GB','Byte'], answer:2, explanation:'GB (Gigabyte) is larger than KB and MB. 1 GB = 1024 MB.' },
+      { type:'fib', q:'Microsoft Word is used for _____ processing', answer:'Word', explanation:'Microsoft Word is a word processing application used to create and edit documents.' },
+    ],
+    medium: [
+      { type:'mcq', q:'Which data structure follows the LIFO principle?', opts:['Queue','Stack','Tree','Graph'], answer:1, explanation:'A Stack follows Last In First Out (LIFO) — the last element added is the first one removed.' },
+      { type:'fib', q:'SQL stands for Structured _____ Language', answer:'Query', explanation:'SQL stands for Structured Query Language, used to manage and query relational databases.' },
+      { type:'mcq', q:'Which layer of the OSI model is responsible for routing?', opts:['Data Link','Network','Session','Transport'], answer:1, explanation:'The Network layer (Layer 3) handles routing of data packets between different networks.' },
+      { type:'fib', q:'In DBMS, a _____ key uniquely identifies a record', answer:'Primary', explanation:'A Primary Key uniquely identifies each record in a database table.' },
+      { type:'mcq', q:'What is the time complexity of Binary Search?', opts:['O(n)','O(log n)','O(n²)','O(1)'], answer:1, explanation:'Binary Search has O(log n) time complexity as it halves the search space with each step.' },
+      { type:'fib', q:'HTML is used for creating web _____', answer:'Pages', explanation:'HTML (HyperText Markup Language) is the standard language for creating web pages.' },
+      { type:'mcq', q:'Which protocol is used for secure web communication?', opts:['FTP','SMTP','HTTPS','POP3'], answer:2, explanation:'HTTPS uses SSL/TLS encryption to provide secure communication over the web.' },
+      { type:'fib', q:'RAM is a type of _____ memory', answer:'Volatile', explanation:'RAM is volatile memory, meaning it loses all data when the power is turned off.' },
+      { type:'mcq', q:'Which database model organizes data into tables?', opts:['Hierarchical','Relational','Network','Object'], answer:1, explanation:'The Relational model organizes data into tables (rows and columns) linked by relationships.' },
+      { type:'fib', q:'Python is considered a _____-level programming language', answer:'High', explanation:'Python is a high-level language, meaning it is closer to human language than machine code.' },
+    ],
+    hard: [
+      { type:'mcq', q:'Which theorem defines the maximum data transmission rate over a noisy channel?', opts:['Nyquist Theorem','Shannon-Hartley Theorem','Bayes Theorem','Rice Theorem'], answer:1, explanation:'The Shannon-Hartley Theorem defines the theoretical maximum data rate for a noisy channel.' },
+      { type:'fib', q:'CAP theorem states a distributed system can guarantee at most two of Consistency, Availability, and _____', answer:'Partition Tolerance', explanation:'The CAP theorem says a distributed system can only guarantee two of the three: Consistency, Availability, and Partition Tolerance.' },
+      { type:'mcq', q:'Which consensus algorithm is commonly used in Byzantine fault-tolerant systems?', opts:['BFS','PBFT','Dijkstra','Bellman-Ford'], answer:1, explanation:'PBFT (Practical Byzantine Fault Tolerance) is widely used for Byzantine fault-tolerant consensus.' },
+      { type:'fib', q:'The halting problem was proven undecidable by Alan _____', answer:'Turing', explanation:'Alan Turing proved the halting problem is undecidable in 1936, a cornerstone of computer science theory.' },
+      { type:'mcq', q:'Which complexity class contains problems verifiable in polynomial time?', opts:['P','NP','PSPACE','EXPTIME'], answer:1, explanation:'NP (Nondeterministic Polynomial time) contains problems whose solutions can be verified in polynomial time.' },
+      { type:'fib', q:'Lambda calculus was developed by Alonzo _____', answer:'Church', explanation:'Alonzo Church developed lambda calculus in the 1930s, forming the theoretical basis for functional programming.' },
+      { type:'mcq', q:'Which normal form eliminates transitive dependency?', opts:['1NF','2NF','3NF','BCNF'], answer:2, explanation:'Third Normal Form (3NF) eliminates transitive dependencies to reduce data redundancy.' },
+      { type:'fib', q:'RSA security is primarily based on the difficulty of integer _____', answer:'Factorization', explanation:'RSA encryption relies on the mathematical difficulty of factoring very large numbers into primes.' },
+      { type:'mcq', q:'Which scheduling algorithm minimizes average waiting time?', opts:['FCFS','Round Robin','Shortest Job First','Priority'], answer:2, explanation:'Shortest Job First (SJF) minimizes average waiting time by always running the shortest available job next.' },
+      { type:'fib', q:'Gödel\'s incompleteness theorem applies to sufficiently expressive formal _____', answer:'Systems', explanation:'Gödel\'s theorem states that in any sufficiently expressive formal system, there are true statements that cannot be proven.' },
+    ],
+  },
+  history: {
+    easy: [
+      { type:'mcq', q:'Who is known as the Father of the Nation in India?', opts:['Nehru','Gandhi','Bose','Patel'], answer:1, explanation:'Mahatma Gandhi is called the Father of the Nation for his role in India\'s independence movement.' },
+      { type:'fib', q:'India became independent in _____', answer:'1947', explanation:'India gained independence from British rule on August 15, 1947.' },
+      { type:'mcq', q:'Who built the Taj Mahal?', opts:['Akbar','Shah Jahan','Humayun','Babur'], answer:1, explanation:'Shah Jahan built the Taj Mahal in memory of his wife Mumtaz Mahal.' },
+      { type:'fib', q:'The Red Fort is located in _____', answer:'Delhi', explanation:'The Red Fort is a historic fort in Old Delhi, built by Mughal Emperor Shah Jahan.' },
+      { type:'mcq', q:'Who discovered America?', opts:['Vasco da Gama','Christopher Columbus','Magellan','Cook'], answer:1, explanation:'Christopher Columbus reached the Americas in 1492 while sailing under the Spanish flag.' },
+      { type:'fib', q:'The first Prime Minister of India was Jawaharlal _____', answer:'Nehru', explanation:'Jawaharlal Nehru became India\'s first Prime Minister on August 15, 1947.' },
+      { type:'mcq', q:'Which civilization existed in ancient India?', opts:['Roman','Indus Valley','Aztec','Maya'], answer:1, explanation:'The Indus Valley Civilization is one of the world\'s oldest, flourishing around 3300–1300 BCE.' },
+      { type:'fib', q:'Mahatma Gandhi launched the Quit India Movement in _____', answer:'1942', explanation:'Gandhi launched the Quit India Movement on August 8, 1942, demanding an end to British rule.' },
+      { type:'mcq', q:'Which monument is known as a symbol of love?', opts:['Qutub Minar','Taj Mahal','India Gate','Gateway of India'], answer:1, explanation:'The Taj Mahal in Agra is regarded worldwide as a timeless symbol of love.' },
+      { type:'fib', q:'Ashoka belonged to the _____ dynasty', answer:'Maurya', explanation:'Ashoka was the third emperor of the Maurya dynasty, reigning from 268 to 232 BCE.' },
+    ],
+    medium: [
+      { type:'mcq', q:'Which battle established British dominance in Bengal?', opts:['Panipat','Plassey','Buxar','Talikota'], answer:1, explanation:'The Battle of Plassey in 1757 gave the British East India Company control over Bengal.' },
+      { type:'fib', q:'Ashoka converted to _____ after the Kalinga War', answer:'Buddhism', explanation:'After witnessing the devastation of the Kalinga War, Ashoka converted to Buddhism and preached non-violence.' },
+      { type:'mcq', q:'Who wrote the Arthashastra?', opts:['Kalidasa','Chanakya','Panini','Aryabhata'], answer:1, explanation:'Chanakya (Kautilya) wrote the Arthashastra, an ancient treatise on statecraft and economic policy.' },
+      { type:'fib', q:'The Mughal Empire was founded by _____', answer:'Babur', explanation:'Babur founded the Mughal Empire in 1526 after winning the First Battle of Panipat.' },
+      { type:'mcq', q:'Which event started World War I?', opts:['Russian Revolution','Assassination of Franz Ferdinand','Pearl Harbor','Versailles Treaty'], answer:1, explanation:'The assassination of Archduke Franz Ferdinand of Austria in 1914 triggered the start of World War I.' },
+      { type:'fib', q:'The French Revolution began in _____', answer:'1789', explanation:'The French Revolution began in 1789, leading to the end of the monarchy and the rise of the republic.' },
+      { type:'mcq', q:'Which Gupta ruler was called the Napoleon of India?', opts:['Chandragupta I','Samudragupta','Kumaragupta','Skandagupta'], answer:1, explanation:'Samudragupta is called the Napoleon of India due to his military conquests across the subcontinent.' },
+      { type:'fib', q:'The Berlin Wall fell in _____', answer:'1989', explanation:'The Berlin Wall fell on November 9, 1989, reuniting East and West Germany.' },
+      { type:'mcq', q:'Who founded the Slave Dynasty?', opts:['Balban','Qutb-ud-din Aibak','Iltutmish','Razia Sultan'], answer:1, explanation:'Qutb-ud-din Aibak founded the Slave Dynasty in 1206, the first dynasty of the Delhi Sultanate.' },
+      { type:'fib', q:'The Treaty of Versailles was signed in _____', answer:'1919', explanation:'The Treaty of Versailles was signed on June 28, 1919, officially ending World War I.' },
+    ],
+    hard: [
+      { type:'mcq', q:'Which historiographical school emphasizes long-term social structures?', opts:['Marxist','Annales School','Positivist','Nationalist'], answer:1, explanation:'The Annales School, founded in France, focuses on long-term social, economic, and geographical history.' },
+      { type:'fib', q:'Fernand Braudel popularized the concept of _____ durée', answer:'Longue', explanation:'Fernand Braudel\'s concept of "longue durée" refers to long-term historical structures and slow-changing forces.' },
+      { type:'mcq', q:'Who authored "The Decline and Fall of the Roman Empire"?', opts:['Toynbee','Gibbon','Carr','Hobsbawm'], answer:1, explanation:'Edward Gibbon wrote "The History of the Decline and Fall of the Roman Empire" between 1776 and 1789.' },
+      { type:'fib', q:'Subaltern Studies was initiated by Ranajit _____', answer:'Guha', explanation:'Ranajit Guha founded the Subaltern Studies collective to recover the history of marginalized groups in India.' },
+      { type:'mcq', q:'Which historian wrote "What is History?"', opts:['E.H. Carr','Gibbon','Toynbee','Bloch'], answer:0, explanation:'E.H. Carr wrote "What is History?" in 1961, examining the relationship between historians and facts.' },
+      { type:'fib', q:'The term historiography refers to the study of historical _____', answer:'Writing', explanation:'Historiography is the study of how history has been written, interpreted, and debated by historians.' },
+      { type:'mcq', q:'Which theory interprets history primarily through class struggle?', opts:['Liberal','Marxist','Realist','Structuralist'], answer:1, explanation:'Marxist historiography views history as driven by class struggle and economic forces.' },
+      { type:'fib', q:'Arnold Toynbee\'s theory focused on civilizations\' _____ and response', answer:'Challenge', explanation:'Toynbee argued that civilizations rise and fall based on how they respond to challenges from their environment.' },
+      { type:'mcq', q:'Which ancient source describes Chandragupta Maurya\'s court?', opts:['Pliny','Megasthenes\' Indica','Herodotus','Tacitus'], answer:1, explanation:'Megasthenes was a Greek ambassador who visited Chandragupta\'s court and wrote about it in his work Indica.' },
+      { type:'fib', q:'Leopold von Ranke advocated history based on primary _____', answer:'Sources', explanation:'Ranke championed the use of primary sources and archival research, earning him the title "father of modern history".' },
+    ],
+  },
+  science: {
+    easy: [
+      { type:'mcq', q:'Which planet is known as the Red Planet?', opts:['Venus','Jupiter','Mars','Saturn'], answer:2, explanation:'Mars appears red due to iron oxide (rust) on its surface.' },
+      { type:'fib', q:'Water boils at _____ °C', answer:'100', explanation:'Water boils at 100°C at standard atmospheric pressure.' },
+      { type:'fib', q:'Which gas do plants absorb? (write the full name)', answer:'Carbon Dioxide', explanation:'Plants absorb carbon dioxide during photosynthesis and release oxygen.' },
+      { type:'fib', q:'The human body has _____ bones', answer:'206', explanation:'An adult human body has 206 bones.' },
+      { type:'mcq', q:'Which organ pumps blood?', opts:['Lung','Kidney','Liver','Heart'], answer:3, explanation:'The heart pumps blood through the circulatory system to supply oxygen and nutrients.' },
+      { type:'fib', q:'Earth revolves around the _____', answer:'Sun', explanation:'Earth takes approximately 365.25 days to complete one revolution around the Sun.' },
+      { type:'fib', q:'H₂O is the formula for _____', answer:'Water', explanation:'H₂O represents water, consisting of two hydrogen atoms and one oxygen atom.' },
+      { type:'fib', q:'Which vitamin is obtained from sunlight? (e.g. Vitamin ___)', answer:'D', explanation:'Vitamin D is produced by the skin when exposed to sunlight.' },
+      { type:'mcq', q:'Animals that eat only plants are called:', opts:['Carnivores','Herbivores','Omnivores','Scavengers'], answer:1, explanation:'Herbivores are animals that eat only plants, such as cows, deer, and rabbits.' },
+      { type:'fib', q:'The SI unit of force is _____', answer:'Newton', explanation:'The Newton (N) is the SI unit of force, named after Isaac Newton.' },
+    ],
+    medium: [
+      { type:'mcq', q:'Which law states entropy always increases in an isolated system?', opts:['First Law','Second Law','Third Law','Zeroth Law'], answer:1, explanation:'The Second Law of Thermodynamics states that entropy (disorder) always increases in an isolated system.' },
+      { type:'fib', q:'DNA stands for Deoxyribo_____ Acid', answer:'Nucleic', explanation:'DNA stands for Deoxyribonucleic Acid, the molecule that carries genetic information.' },
+      { type:'mcq', q:'Which particle has no electric charge?', opts:['Electron','Proton','Neutron','Positron'], answer:2, explanation:'Neutrons have no electric charge and are found in the nucleus alongside protons.' },
+      { type:'fib', q:'The powerhouse of the cell is the _____', answer:'Mitochondria', explanation:'Mitochondria produce ATP, the main energy currency of the cell.' },
+      { type:'mcq', q:'Which scientist proposed the uncertainty principle?', opts:['Einstein','Heisenberg','Bohr','Planck'], answer:1, explanation:'Werner Heisenberg proposed the Uncertainty Principle in 1927.' },
+      { type:'fib', q:'The pH of pure water is _____', answer:'7', explanation:'Pure water has a neutral pH of 7, meaning it is neither acidic nor basic.' },
+      { type:'mcq', q:'Which blood group is the universal donor?', opts:['A+','B+','O−','AB+'], answer:2, explanation:'O− blood group is the universal donor because it can be given to patients of any blood type.' },
+      { type:'fib', q:'ATP stands for Adenosine Triphos_____', answer:'Phate', explanation:'ATP (Adenosine Triphosphate) is the molecule that stores and transfers energy in cells.' },
+      { type:'mcq', q:'Which bond involves sharing of electrons?', opts:['Ionic','Covalent','Metallic','Hydrogen'], answer:1, explanation:'In a covalent bond, atoms share electrons to achieve a stable electron configuration.' },
+      { type:'fib', q:'Mendel is known as the father of _____', answer:'Genetics', explanation:'Gregor Mendel\'s experiments with pea plants laid the foundation of modern genetics.' },
+    ],
+    hard: [
+      { type:'mcq', q:'Which equation governs non-relativistic quantum mechanics?', opts:['Maxwell Equation','Schrödinger Equation','Dirac Equation','Navier-Stokes'], answer:1, explanation:'The Schrödinger Equation describes how the quantum state of a system evolves over time.' },
+      { type:'fib', q:'The Higgs boson is associated with the _____ field', answer:'Higgs', explanation:'The Higgs boson is the particle associated with the Higgs field, which gives mass to other particles.' },
+      { type:'mcq', q:'Which process creates heavy elements in supernovae?', opts:['Alpha Decay','r-process nucleosynthesis','Fusion Only','Beta Decay'], answer:1, explanation:'The rapid neutron-capture process (r-process) in supernovae creates elements heavier than iron.' },
+      { type:'fib', q:'CRISPR technology uses the Cas9 _____', answer:'Enzyme', explanation:'CRISPR-Cas9 uses the Cas9 enzyme as molecular scissors to cut DNA at specific locations.' },
+      { type:'mcq', q:'Which theorem relates symmetry and conservation laws?', opts:['Green\'s','Noether\'s','Stokes\'','Gauss\''], answer:1, explanation:'Noether\'s Theorem states that every symmetry in physics corresponds to a conservation law.' },
+      { type:'fib', q:'The Navier-Stokes equations describe fluid _____', answer:'Motion', explanation:'The Navier-Stokes equations describe the motion of viscous fluid substances.' },
+      { type:'mcq', q:'Which interpretation of quantum mechanics involves wavefunction collapse?', opts:['Many Worlds','Copenhagen','Pilot Wave','Consistent Histories'], answer:1, explanation:'The Copenhagen interpretation holds that the wavefunction collapses upon measurement.' },
+      { type:'fib', q:'The Standard Model contains _____ fundamental forces', answer:'Three', explanation:'The Standard Model describes three fundamental forces: electromagnetic, weak nuclear, and strong nuclear.' },
+      { type:'mcq', q:'Which enzyme synthesizes RNA from DNA?', opts:['DNA Polymerase','RNA Polymerase','Ligase','Helicase'], answer:1, explanation:'RNA Polymerase transcribes DNA into RNA during the process of gene expression.' },
+      { type:'fib', q:'The Drake Equation estimates the number of communicative extraterrestrial _____', answer:'Civilizations', explanation:'The Drake Equation is used to estimate the number of active communicative extraterrestrial civilizations in the galaxy.' },
+    ],
+  },
+  general: {
+    easy: [
+      { type:'fib', q:'India\'s national animal is the _____', answer:'Tiger', explanation:'The Bengal Tiger is India\'s national animal, adopted in 1973.' },
+      { type:'mcq', q:'Which is the largest ocean?', opts:['Atlantic','Pacific','Indian','Arctic'], answer:1, explanation:'The Pacific Ocean is the largest, covering about 46% of Earth\'s water surface.' },
+      { type:'fib', q:'The capital of France is _____', answer:'Paris', explanation:'Paris has been the capital of France since the 10th century.' },
+      { type:'fib', q:'A leap year has _____ days', answer:'366', explanation:'A leap year has 366 days, with an extra day added to February.' },
+      { type:'fib', q:'India\'s national bird is the _____', answer:'Peacock', explanation:'The Indian Peacock (Pavo cristatus) was declared India\'s national bird in 1963.' },
+      { type:'fib', q:'Mount Everest is located in the _____ mountains', answer:'Himalayas', explanation:'Mount Everest is part of the Himalayan mountain range on the Nepal-Tibet border.' },
+      { type:'mcq', q:'Which continent is known as the Dark Continent?', opts:['Asia','Africa','Europe','Australia'], answer:1, explanation:'Africa was historically called the "Dark Continent" by Europeans due to limited knowledge of its interior.' },
+      { type:'fib', q:'The currency of Japan is the _____', answer:'Yen', explanation:'The Japanese Yen (¥) has been Japan\'s official currency since 1871.' },
+      { type:'mcq', q:'Which is the largest planet in the Solar System?', opts:['Saturn','Jupiter','Uranus','Neptune'], answer:1, explanation:'Jupiter is the largest planet, with a mass more than twice that of all other planets combined.' },
+      { type:'fib', q:'India has _____ states', answer:'28', explanation:'India is divided into 28 states and 8 Union Territories.' },
+    ],
+    medium: [
+      { type:'mcq', q:'Which country has the longest coastline?', opts:['Russia','Canada','Australia','USA'], answer:1, explanation:'Canada has the world\'s longest coastline at approximately 202,080 km.' },
+      { type:'fib', q:'The headquarters of the United Nations is in _____', answer:'New York', explanation:'The UN headquarters is located in Manhattan, New York City, USA.' },
+      { type:'mcq', q:'Which river carries the largest volume of water?', opts:['Nile','Amazon','Yangtze','Mississippi'], answer:1, explanation:'The Amazon River carries the largest volume of water, accounting for about 20% of global river discharge.' },
+      { type:'fib', q:'OPEC stands for Organization of Petroleum Exporting _____', answer:'Countries', explanation:'OPEC is an intergovernmental organization of major oil-producing nations formed in 1960.' },
+      { type:'mcq', q:'Which country hosted the 2024 Summer Olympics?', opts:['Japan','France','USA','China'], answer:1, explanation:'France hosted the 2024 Summer Olympics in Paris.' },
+      { type:'fib', q:'The IMF stands for International Monetary _____', answer:'Fund', explanation:'The International Monetary Fund (IMF) was established in 1945 to promote global economic stability.' },
+      { type:'mcq', q:'Which desert is the largest hot desert?', opts:['Gobi','Sahara','Arabian','Kalahari'], answer:1, explanation:'The Sahara Desert in Africa is the world\'s largest hot desert, covering about 9.2 million km².' },
+      { type:'fib', q:'The headquarters of NATO is in _____', answer:'Brussels', explanation:'NATO\'s headquarters is located in Brussels, Belgium.' },
+      { type:'mcq', q:'Which strait separates Asia and North America?', opts:['Gibraltar','Bering','Hormuz','Malacca'], answer:1, explanation:'The Bering Strait separates Russia (Asia) from Alaska (North America).' },
+      { type:'fib', q:'The World Bank was established in _____', answer:'1944', explanation:'The World Bank was established in 1944 during the Bretton Woods Conference.' },
+    ],
+    hard: [
+      { type:'mcq', q:'Which index measures income inequality?', opts:['HDI','Gini Coefficient','CPI','GDP'], answer:1, explanation:'The Gini Coefficient measures income inequality within a country, ranging from 0 (perfect equality) to 1 (total inequality).' },
+      { type:'fib', q:'The concept of "soft power" was developed by Joseph _____', answer:'Nye', explanation:'Joseph Nye coined "soft power" to describe a country\'s ability to influence others through culture and diplomacy rather than force.' },
+      { type:'mcq', q:'Which agreement established the World Trade Organization?', opts:['Kyoto Protocol','Marrakesh Agreement','Maastricht Treaty','Bretton Woods'], answer:1, explanation:'The Marrakesh Agreement of 1994 established the WTO, which replaced the GATT.' },
+      { type:'fib', q:'The Triffin Dilemma concerns the role of the _____ as a reserve currency', answer:'Dollar', explanation:'The Triffin Dilemma highlights the conflict between the US dollar\'s role as a national currency and the world\'s reserve currency.' },
+      { type:'mcq', q:'Which geopolitical theory was proposed by Halford Mackinder?', opts:['Domino Theory','Heartland Theory','Clash of Civilizations','Rimland Theory'], answer:1, explanation:'Mackinder\'s Heartland Theory (1904) argued that control of the Eurasian heartland would lead to world domination.' },
+      { type:'fib', q:'Purchasing Power Parity is commonly abbreviated as _____', answer:'PPP', explanation:'PPP (Purchasing Power Parity) is an economic measure for comparing productivity and living standards between countries.' },
+      { type:'mcq', q:'Which organization publishes the Human Development Index?', opts:['WTO','UNDP','IMF','UNESCO'], answer:1, explanation:'The UNDP (United Nations Development Programme) publishes the annual Human Development Index.' },
+      { type:'fib', q:'The Bretton Woods Conference was held in _____', answer:'1944', explanation:'The Bretton Woods Conference of 1944 established the post-WWII international monetary system.' },
+      { type:'mcq', q:'Which sea is shrinking due to excessive diversion of rivers?', opts:['Caspian Sea','Aral Sea','Black Sea','Baltic Sea'], answer:1, explanation:'The Aral Sea in Central Asia has drastically shrunk since the 1960s due to Soviet irrigation projects.' },
+      { type:'fib', q:'The Correlates of War project is associated with the study of international _____', answer:'Conflict', explanation:'The Correlates of War project systematically studies the causes and patterns of international conflict and war.' },
+    ],
+  },
+};
+
+let currentCat = 'general';
+let currentDiff = 'easy';
+let questions = [];
+let currentQ = 0;
+let score = 0;
+let correctCount = 0;
+let wrongCount = 0;
+let answered = false;
+let timerInterval;
+let timeLeft = 30;
+let totalTime = 0;
+let questionStartTime;
+
+const LETTERS = ['A','B','C','D'];
+const TIMER_SECONDS = { easy: 30, medium: 20, hard: 12 };
+
+function selectCat(el) {
+  document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  currentCat = el.dataset.cat;
+}
+
+function selectDiff(el) {
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  currentDiff = el.dataset.diff;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startQuiz() {
+  questions = [...ALL_QUESTIONS[currentCat][currentDiff]].sort(() => Math.random()-0.5).slice(0,10);
+  currentQ = 0; score = 0; correctCount = 0; wrongCount = 0; totalTime = 0;
+  showScreen('quizScreen');
+  loadQuestion();
+}
+
+function loadQuestion() {
+  const q = questions[currentQ];
+  answered = false;
+  questionStartTime = Date.now();
+  document.getElementById('qCounter').textContent = `Question ${currentQ+1} of ${questions.length}`;
+  document.getElementById('scorePill').textContent = `Score: ${score}`;
+  document.getElementById('qTypeBadge').textContent = q.type==='fib' ? '✏️ Fill in the Blank' : '⚡ Multiple Choice';
+  document.getElementById('qText').textContent = q.q;
+  document.getElementById('feedbackBox').innerHTML = '';
+  document.getElementById('submitBtn').style.display = '';
+  document.getElementById('submitBtn').disabled = false;
+  document.getElementById('nextBtn').style.display = 'none';
+
+  if (q.type === 'mcq') {
+    const shuffled = q.opts.map((o,i) => ({text:o, idx:i})).sort(() => Math.random()-0.5);
+    q._shuffled = shuffled;
+    q._correctShuffled = shuffled.findIndex(o => o.idx === q.answer);
+    document.getElementById('qAnswerArea').innerHTML = `<div class="options-grid">${
+      shuffled.map((o,i) => `<button class="option-btn" id="opt${i}" onclick="selectOpt(${i})">
+        <span class="option-letter">${LETTERS[i]}</span> ${o.text}
+      </button>`).join('')
+    }</div>`;
+    q._selectedOpt = null;
+  } else {
+    document.getElementById('qAnswerArea').innerHTML = `<input class="fib-input" id="fibInput" type="text" placeholder="Type your answer..." oninput="updateSubmit()"/>`;
+    document.getElementById('submitBtn').disabled = true;
+  }
+
+  startTimer();
+}
+
+function updateSubmit() {
+  const val = document.getElementById('fibInput').value.trim();
+  document.getElementById('submitBtn').disabled = val.length === 0;
+}
+
+let selectedOpt = null;
+function selectOpt(i) {
+  if (answered) return;
+  selectedOpt = i;
+  const q = questions[currentQ];
+  q._selectedOpt = i;
+  document.querySelectorAll('.option-btn').forEach((b,j) => {
+    b.style.borderColor = j===i ? 'var(--a)' : '';
+    b.style.background  = j===i ? 'rgba(167,139,250,0.1)' : '';
+  });
+}
+
+function submitAnswer() {
+  if (answered) return;
+  const q = questions[currentQ];
+  clearInterval(timerInterval);
+  answered = true;
+  const elapsed = Math.round((Date.now()-questionStartTime)/1000);
+  totalTime += elapsed;
+
+  let correct = false;
+
+  if (q.type === 'mcq') {
+    const sel = q._selectedOpt;
+    if (sel === null) { nextQuestion(); return; }
+    correct = sel === q._correctShuffled;
+    document.querySelectorAll('.option-btn').forEach((btn,i) => {
+      btn.disabled = true;
+      if (i === q._correctShuffled) btn.classList.add('correct');
+      else if (i === sel && !correct) btn.classList.add('wrong');
+    });
+  } else {
+    const input = document.getElementById('fibInput');
+    const val = input.value.trim().toLowerCase();
+    correct = val === q.answer.toLowerCase() || val.includes(q.answer.toLowerCase());
+    input.classList.add(correct ? 'correct' : 'wrong');
+    input.disabled = true;
+    if (!correct) {
+      const hint = document.createElement('div');
+      hint.style.cssText = 'font-size:0.8rem;color:var(--muted);margin-top:8px;';
+      hint.textContent = `Correct answer: ${q.answer}`;
+      input.parentNode.appendChild(hint);
+    }
+  }
+
+  if (correct) {
+    const pts = currentDiff==='easy'?10:currentDiff==='medium'?15:20;
+    const speedBonus = Math.max(0, TIMER_SECONDS[currentDiff]-elapsed);
+    score += pts + speedBonus;
+    correctCount++;
+  } else {
+    wrongCount++;
+  }
+
+  document.getElementById('scorePill').textContent = `Score: ${score}`;
+  document.getElementById('feedbackBox').innerHTML =
+    `<div class="feedback-box ${correct?'correct-fb':'wrong-fb'}">
+      ${correct ? '✅ Correct!' : '❌ Incorrect!'} ${q.explanation}
+    </div>`;
+
+  document.getElementById('submitBtn').style.display = 'none';
+  document.getElementById('nextBtn').style.display = '';
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= questions.length) showResults();
+  else loadQuestion();
+}
+
+function startTimer() {
+  timeLeft = TIMER_SECONDS[currentDiff];
+  const fill = document.getElementById('timerFill');
+  fill.style.width = '100%';
+  fill.className = 'timer-fill';
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    fill.style.width = (timeLeft/TIMER_SECONDS[currentDiff]*100)+'%';
+    if (timeLeft <= TIMER_SECONDS[currentDiff]*0.3) fill.classList.add('low');
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      if (!answered) { answered=true; wrongCount++; totalTime+=TIMER_SECONDS[currentDiff];
+        document.getElementById('feedbackBox').innerHTML = `<div class="feedback-box wrong-fb">⏰ Time's up! ${questions[currentQ].explanation}</div>`;
+        document.getElementById('submitBtn').style.display='none';
+        document.getElementById('nextBtn').style.display='';
+        if (questions[currentQ].type==='mcq') {
+          document.querySelectorAll('.option-btn').forEach((b,i)=>{b.disabled=true; if(i===questions[currentQ]._correctShuffled)b.classList.add('correct');});
+        } else {
+          const inp=document.getElementById('fibInput'); inp.disabled=true; inp.classList.add('wrong');
+        }
+      }
+    }
+  }, 1000);
+}
+
+function showResults() {
+  clearInterval(timerInterval);
+  showScreen('resultsScreen');
+  const pct = Math.round(correctCount/questions.length*100);
+  const emoji = pct>=80?'🏆':pct>=60?'🎉':pct>=40?'👍':'💪';
+  const title = pct>=80?'Outstanding!':pct>=60?'Great Job!':pct>=40?'Good Effort!':'Keep Practicing!';
+  document.getElementById('resultEmoji').textContent = emoji;
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultSub').textContent = `You scored ${score} points on ${currentCat} quiz`;
+  document.getElementById('statCorrect').textContent = correctCount;
+  document.getElementById('statWrong').textContent = wrongCount;
+  document.getElementById('statTime').textContent = Math.round(totalTime/questions.length)+'s';
+  document.getElementById('ringScore').textContent = pct+'%';
+
+  setTimeout(() => {
+    const circumference = 2 * Math.PI * 65;
+    document.getElementById('ringFill').style.strokeDashoffset = circumference*(1-pct/100);
+  }, 200);
+}
+
+function goHome() { showScreen('welcomeScreen'); }
+</script>
+</body>
+</html>
